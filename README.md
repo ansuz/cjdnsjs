@@ -1,7 +1,8 @@
 # fc00.org
 
 ```IRC
-< randati> But I wouldn't mind if someone wanted to take over fc00. I don't have the time to keep it up
+< randati> But I wouldn't mind if someone wanted to take over fc00. 
+  I don't have the time to keep it up
 ```
 
 [FC00.org](http://www.fc00.org) is a tool to display the network topology of [Hyperboria](https://projectmeshnet.org/), the **premier global cjdns mesh network**.
