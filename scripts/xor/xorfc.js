@@ -16,16 +16,6 @@ var uintXor=function(a,b){
   return byteSwap(a)^byteSwap(b);
 };
 
-// this is just an example of how cjdns' xor metric works
-// so far I haven't used it
-// to xor one uint32_t at a time
-var xorcmp=function(t,a,b){
-  if(a===b)
-    return 0;
-  var ref=byteSwap(t);
-  return ((byteSwap(a)^ref)<(byteSwap(b)^ref))?-1:1;
-};
-
 /* Address functions */
 
 // add in the missing zeros
@@ -45,7 +35,7 @@ var zeropad=function(id){
 
 // accepts a zero-padded IPV6
 // outputs a four element array of 'uint32_t's
-var fcParse=quarter=function(fc){
+var quarter=function(fc){
   var result=[];
   fc.replace(/:/g,"")
     .replace(/[a-f0-9]{8}/g,function(uint){
@@ -57,7 +47,7 @@ var fcParse=quarter=function(fc){
 
 // accepts an 8 character string of hex digits
 // returns a 'uint32_t'
-var fcQuarterToUint=qtoui=function(q){
+var qtoui=function(q){
   var bytes=[];
   q.replace(/[0-9a-f]{2}/g,function(hexByte){
     bytes.push(hexByte);
@@ -78,26 +68,6 @@ var fcUintSwap=function(U){
   return U.slice(2).concat(U.slice(0,2));
 };
 
-// Accepts two (four-element) arrays of uint32_t's 
-var fcXor=function(A,B){
-  return A.map(function(x,i){
-    return uintXor(x,B[i]);
-  });
-};
-
-var fcCompare=function(T,A,B){
-  var T2=fcParse(T).map(fcQuarterToUint)
-    ,A2=fcParse(A).map(fcQuarterToUint)
-    ,B2=fcParse(B).map(fcQuarterToUint);
-  var A3=fcUintSwap(fcXor(T2,A2));
-  var B3=fcUintSwap(fcXor(T2,B2));
-  var temp={};
-  temp[T]={};
-  temp[T][A]=A3;
-  temp[T][B]=B3;
-  return temp;
-};
-
 xorfc.pair=pair=function(ipA,ipB){
   var A=quarter(ipA).map(fcQuarterToUint);
   var B=quarter(ipB).map(fcQuarterToUint);
@@ -110,25 +80,6 @@ xorfc.pair=pair=function(ipA,ipB){
 };
 
 module.exports=xorfc;
-
-/*
-var fcs=[
-  "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
-  ,"0000:0000:0000:0000:0000:0000:0000:0000"
-
-  ,"fcbf:8145:9f55:202:908f:bcce:c01e:caf2" // flip
-  ,"fcbe:5f12:67d8:77ea:e4d8:aecc:2b4f:a4b" // uc
-  ,"fc04:aed1:4231:d381:d755:f3fe:ff9d:fb61" // dev
-  ,"fc99:3ddf:261:c268:c1c:38b6:4640:be65" // cog
-  ,"fc6a:30c9:53a1:2c6b:ccbf:1261:2aef:45d3" // ansuz
-  ,"fc00:a4e7:831d:b0b4:fe4d:3786:4b9a:e50a" // swin
-  ,"fc5e:ccca:e743:18ec:7d72:3726:94df:539c"
-].map(zeropad);
-
-console.log(fcs.map(function(fc){
-  return xorfc(fc,fcs[0]);
-}));
-*/
 
 xorfc.prepare=function(ip){ // unrestricted cjdns ipv6
   return fcUintSwap(
