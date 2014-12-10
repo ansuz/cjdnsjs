@@ -25,6 +25,8 @@ cjdb32.enc=function(input){ // input is a Uint32Array
   return output.join("");
 };
 
+/* from https://github.com/cjdelisle/cjdns/blob/master/contrib/nodejs/tools/lib/publicToIp6.js */
+
 var numForAscii = [
   99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,
   99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,
