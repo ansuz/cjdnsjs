@@ -35,6 +35,26 @@ node xorOf.js <ipv6>
 
 Nodes with a higher value are closer keyspace neighbours, meaning you should have an easier time pinging them. Nodes with lower values are therefore more likely to get tossed from your routing table.
 
+**Update**:
+
+I wrote another script to make it easier to check lots of addresses at once:
+
+```Bash
+node massXor.js fcbf:8145:9f55:202:908f:bcce:c01e:caf2 fcff:3e29:f9fe:5915:e500:f7c5:dc1d:a0ff fc7f:c549:8b85:1082:de17:6f77:e16d:88d4 fccc:7904:b05b:a579:957b:deef:f066:cad9 fc3b:f894:81ab:a060:149c:7d61:87b7:2ef9 fc55:aee7:1695:146b:6251:2264:cb8e:aeb1
+```
+
+Outputs:
+
+```Text
+Checking xor distance relative to fcbf:8145:9f55:202:908f:bcce:c01e:caf2
+fcbf:8145:9f55:202:908f:bcce:c01e:caf2 -> 0
+fcff:3e29:f9fe:5915:e500:f7c5:dc1d:a0ff -> 7388081.362797131
+fc7f:c549:8b85:1082:de17:6f77:e16d:88d4 -> 8046645.017699153
+fccc:7904:b05b:a579:957b:deef:f066:cad9 -> 7426739.126948221
+fc3b:f894:81ab:a060:149c:7d61:87b7:2ef9 -> 7030404.704775695
+fc55:aee7:1695:146b:6251:2264:cb8e:aeb1 -> 7449597.043243148
+```
+
 ## Reporting your findings
 
 If you notice a correlation, please report your findings [on the wiki](https://github.com/ansuz/fc00.org/wiki/xor-findings).
