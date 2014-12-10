@@ -10,6 +10,8 @@ var range = range = function(a,b){ // inclusive range function
 };
 
 var cjdb32=require("./cjdb32.js");
+var enc=cjdb32.enc;
+var dec=cjdb32.dec;
 
 var creds={};
 
@@ -89,7 +91,7 @@ creds.genAddress=function(){
   address.publicKey=creds.privToPub(address.privateKey);
 
   // generate the publicKey's b32 representation
-  address.b32pub=cjdb32(address.publicKey)+".k";
+  address.b32pub=enc(address.publicKey)+".k";
 
   // done!
   return address;
