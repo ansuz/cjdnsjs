@@ -8,6 +8,10 @@ I think [we may need to develop a distributed method of address aggregation](htt
 
 To get an idea about how subtle metrics can affect thresholds and equilibria in simulated spaces, read [this](http://ncase.me/polygons/).
 
+## Understanding the terminology
+
+See [theory.md](theory.md) for a clarification of terms used throughout.
+
 ## arrayFile.json
 
 Contains a single key, 'nodes', an Array of 100 nodes.
