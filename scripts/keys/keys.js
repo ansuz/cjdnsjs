@@ -3,7 +3,7 @@ var crypto=require("crypto"); // using two different crypto libs
 // crypto is a builtin, so I'd prefer that
 // but tweetnacl would be hard to replace
 
-var range = range = function(a,b){ // inclusive range function
+var range = function(a,b){ // inclusive range function
   var temp=[];
   while(a<=b)temp.push(a++);
   return temp;
