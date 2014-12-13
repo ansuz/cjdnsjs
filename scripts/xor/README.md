@@ -22,7 +22,7 @@ You'll need to download the scripts in this folder. You don't need the whole rep
 ```Bash
 mkdir xorfc;
 cd xorfc;
-wget https://raw.githubusercontent.com/ansuz/fc00.org/master/scripts/xor/findMyFC.js https://raw.githubusercontent.com/ansuz/fc00.org/master/scripts/xor/xorfc.js https://raw.githubusercontent.com/ansuz/fc00.org/master/scripts/xor/xorOf.js
+wget https://raw.githubusercontent.com/ansuz/fc00.org/master/scripts/xor/findMyFC.js https://raw.githubusercontent.com/ansuz/fc00.org/master/scripts/xor/xorfc.js https://raw.githubusercontent.com/ansuz/fc00.org/master/scripts/xor/xorOf.js https://raw.githubusercontent.com/ansuz/fc00.org/master/scripts/xor/massXor.js
 ```
 
 ## Running the script
