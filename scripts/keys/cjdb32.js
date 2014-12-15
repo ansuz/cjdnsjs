@@ -39,7 +39,7 @@ var numForAscii = [
 ];
 
 // see util/Base32.h
-cjdb32.dev = function (input) {
+cjdb32.dec = function (input) {
   var output = [];
   var outputIndex = 0;
   var inputIndex = 0;
