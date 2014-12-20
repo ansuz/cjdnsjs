@@ -9,7 +9,7 @@ std.admin.password=passwd.gen(31);
 std.authorizedPasswords=[31.31,31,31,31]
   .map(function(L){
     return {
-      password:passwd.gen(31)
+      password:passwd.gen(L)
     };
   });
 
