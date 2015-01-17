@@ -844,14 +844,32 @@ var versionStats=$.versionStats=function(cjdnsPath,f){
     });
 };
 
+var getCjdnsAdmin=$.getCjdnsAdmin=function(){
+  // assumes you have a file ~/.cjdnsadmin
+  // which is valid JSON, and contains a 'cjdnsPath' attribute
+  // which is an absolute path to your cjdns git repository
+  //{fs}
+  try{
+    return JSON.parse(fs.readFileSync(process.env.HOME+'/.cjdnsadmin','utf-8'));
+  }catch(err){
+    console.log(err);
+    return {};
+  }
+};
+
 var bugReport=$.bugReport=function(f){
-  //[peerStats,dumpTable,myfc]
+  //{fs}
+  //[peerStats,dumpTable,myfc,getCjdnsAdmin]
   var race=0;
   var report={};
+  f=f||console.log;
   var checkIfDone=function(){
     if(race===0)
       f(report);
   };
+
+  // get path to cjdns git repo
+  var cjdnsPath=getCjdnsAdmin().cjdnsPath;
 
   // your fc address
   report.myfcs=$.myfc();
@@ -874,7 +892,7 @@ var bugReport=$.bugReport=function(f){
 
   // cjdns version && git commit
   race++;
-  $.versionStats(function(x){
+  $.versionStats(cjdnsPath,function(x){
     report.cjdrouteVersion=x.cjdrouteVersion;
     report.gitCommit=x.gitCommit;
     race--;
