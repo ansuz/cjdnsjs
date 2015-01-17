@@ -2,6 +2,7 @@ var $=ansuz=require("ansuz"); // npm install ansuz
 var nacl=require("tweetnacl"); // npm install tweetnacl
 
 /// builtins
+var child_process=require("child_process");
 var Crypto=crypto=require("crypto");
 var os=require("os");
 var Fs=fs=require("fs");
@@ -817,8 +818,34 @@ var buildTree=$.buildTree=function (origNodes) {
   throw new Error();
 };
 
+var versionStats=$.versionStats=function(cjdnsPath,f){
+  //{child_process}
+  var stats={};
+  f=f||console.log;
+  var race=2;
+  var F=function(){
+    if(race===0)
+      f(stats);
+  };
+
+  child_process.exec('cd '+cjdnsPath+'; ./cjdroute -v',function(e,out,err){
+    if(e)console.log('cjdroute -v ERR: '+err);
+    stats.cjdrouteVersion=out.replace(/\n/g,'');
+    race--;
+    F();
+  });
+  
+  child_process.exec('cd '+cjdnsPath+'; git rev-parse HEAD'
+    ,function(e,out,err){
+      if(e)console.log('git version ERR: '+err);
+      stats.gitCommit=out.replace(/\n/g,'');
+      race--;
+      F();
+    });
+};
+
 var bugReport=$.bugReport=function(f){
-  //[peerStats,dumpTable]
+  //[peerStats,dumpTable,myfc]
   var race=0;
   var report={};
   var checkIfDone=function(){
@@ -845,8 +872,15 @@ var bugReport=$.bugReport=function(f){
     checkIfDone();
   });
 
-  // cjdns version
-  // git commit
+  // cjdns version && git commit
+  race++;
+  $.versionStats(function(x){
+    report.cjdrouteVersion=x.cjdrouteVersion;
+    report.gitCommit=x.gitCommit;
+    race--;
+    checkIfDone();
+  });
+
   // comments
 };
 
