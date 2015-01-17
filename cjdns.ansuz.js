@@ -1,6 +1,5 @@
-var $=ansuz=require("./ansuz"); // npm install ansuz
-
-var nacl=require("tweetnacl");
+var $=ansuz=require("ansuz"); // npm install ansuz
+var nacl=require("tweetnacl"); // npm install tweetnacl
 
 /// builtins
 var Crypto=crypto=require("crypto");
