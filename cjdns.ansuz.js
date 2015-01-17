@@ -817,6 +817,39 @@ var buildTree=$.buildTree=function (origNodes) {
   throw new Error();
 };
 
+var bugReport=$.bugReport=function(f){
+  //[peerStats,dumpTable]
+  var race=0;
+  var report={};
+  var checkIfDone=function(){
+    if(race===0)
+      f(report);
+  };
+
+  // your fc address
+  report.myfcs=$.myfc();
+
+  // your table dump
+  race++;
+  $.dumpTable(function(x){
+    report.dumpTable=x;
+    race--;
+    checkIfDone();
+  });
+
+  // your peer stats
+  race++;
+  $.peerStats(function(x){
+    report.peerStats=x;
+    race--;
+    checkIfDone();
+  });
+
+  // cjdns version
+  // git commit
+  // comments
+};
+
 var pathFinderTree=$.pathFinderTree=function(f){
   //[connectWithAdminInfo,isArray,printTree,getAddresses,buildTree]
   var results={};
