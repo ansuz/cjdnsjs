@@ -23,4 +23,4 @@ Developing these functions in Javascript instead of C means they're a fair bit s
 2. easier to read, reason with, and debug
 3. easily embedded into a variety of clientside applications (such as the original graph code)
 
-This ultimately means that as we reimplement these functions, it will be easier to port them to other languages, like [Ruby](https://github.com/lgierth/cjdns.rb/blob/master/cjdns.rb).
+This ultimately means that as we reimplement these functions, it will be easier to port them to other languages, like [Ruby](https://github.com/lgierth/cjdns.rb/).
