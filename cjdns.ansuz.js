@@ -116,6 +116,14 @@ var compare=$.compare=function(T,A,B){
   return 0;
 };
 
+var uncomment=$.uncomment=function(cjdO){
+  return cjdO
+    .split("\n")
+    .map(function(line,index){return line.replace(/\/\/.*$/g,"");})
+    .join("\n")
+    .replace(/\/\*([\s\S]*?)\*\//g,"");
+};
+
 var cjdb32enc=$.cjdb32enc=function(input){ // input is a Uint32Array
   var b32const="0123456789bcdfghjklmnpqrstuvwxyz".split("");
   var L=input.length;
@@ -196,10 +204,6 @@ var privToPub=$.privToPub=function(priv){
   });
 };
 
-/* TODO compare and unify cjdb32dec and Base32_decode
-	compare PublicToIp6 and pubToIp6
-*/
-
 // see util/Base32.h
 var cjdb32dec=$.cjdb32dec=function (input) {
   var numForAscii = [
@@ -255,7 +259,7 @@ var pubToIp6=$.pubToIp6=function(pub){
 
     var out = [];
     for (var i = 0; i < 8; i++) {
-        out.push(first16.substring(i*4, i*4+4));
+      out.push(first16.substring(i*4, i*4+4));
     }
     return out.join(':');
 };
@@ -479,11 +483,9 @@ var bparseDict=$.bparseDict=function(str) {
     key = bparseString(str);
     if(null == key)
       return;
-
     val = bparse(key[1]);
     if(null == val)
       return null;
-
     dict[key[0]] = val[0];
     str = val[1];
   }
@@ -953,29 +955,248 @@ var pathFinderTree=$.pathFinderTree=function(f){
   });
 };
 
-var createSemaphore=$.createSemaphore=function (resourceCount) {
-    var queue = [];
-    var returnAfter = function (func) {
-        var called = 0;
-        return function () {
-            if (called++) { throw new Error("Function called multiple times"); }
-            if (func) { func.apply(null, arguments); }
-            resourceCount++;
-            check();
-        };
-    };
-    var check = function () {
-        if (resourceCount < 0) { throw new Error("(resourceCount < 0) should never happen"); }
-        if (resourceCount === 0 || queue.length === 0) { return; }
-        resourceCount--;
-        queue.shift()(returnAfter);
-    };
-    return {
-        take: function (func) {
-            queue.push(func);
-            check();
+var nodeDescToIp6=$.nodeDescToIp6=function (nodeDesc) {
+  //[pubToIp6]
+  var key = nodeDesc.replace(/.*\.([^.]*\.k)$/, function (all, one) { return one; });
+  return pubToIp6(key);
+};
+
+var nodeDescHighBits=$.nodeDescHighBits=function (nodeDesc) {
+  //[nodeDescToIp6]
+  var ip6 = nodeDescToIp6(nodeDesc);
+  return ip6.substring(20,29);
+};
+
+var tracePath=$.tracePath=function (target, queryNode, cjdns, cb, doneCb) {
+  //[connectWithAdminInfo,nodeDescToIp6]
+  var lastNode = queryNode;
+  var again = function () {
+    cjdns.RouterModule_nextHop(target, lastNode, function (err, ret) {
+      if (err) { 
+        console.log('RouterModule_nextHop ERR: '+err);
+        return {};
+//        throw err;
+      }
+      if(!ret){
+        console.log("No returned value... old nodes in the way?");
+      }
+      ret.from = lastNode;
+      ret.fromIP6 = nodeDescToIp6(lastNode);
+      cb(ret);
+      if (ret.error !== 'none' || !ret.nodes || !ret.nodes.length) {
+        doneCb(false);
+        console.log("Old node? wtf.");
+        return;
+      }
+      if (ret.fromIP6 === target) {
+        doneCb(true);
+        console.log("Found the target");
+        return;
+      }
+      lastNode = ret.nodes[0];
+      again();
+    });
+  };
+  again();
+};
+
+var getTrace=$.getTrace=function(target,f){
+  f=f||console.log;
+  var cjdns
+    ,self
+    ,lastRet;
+  var results={hops:[],backHops:[]};
+  nThen(function(w){ // w is a function, 'waitFor'
+    connectWithAdminInfo(w(function(c){cjdns=c;}));
+  }).nThen(function(w){
+    cjdns.RouterModule_getPeers('0000.0000.0000.0001',w(function(err,ret){
+      if(err){console.log(err)} // if called from a server, we don't want to crash
+      self=ret.peers[0];
+    }));
+  }).nThen(function(w){
+    var thisOne={};
+    thisOne.self=self;
+    thisOne.highBits=nodeDescHighBits(self);
+    tracePath(target,self,cjdns,function(ret){
+      lastRet=ret;
+      thisOne.ms=ret.ms;
+      thisOne.nextOne={};
+      if(ret.nodes){
+//        console.log(ret);
+        if(ret.nodes&&ret.nodes.length===0){
+          thisOne.cornered=true;
+        }else if(ret.nodes[0]!==ret.from){
+          thisOne.cornered=false;
+          thisOne.nextOne=ret.nodes[0];
+          thisOne.nextOne.highBits=nodeDescHighBits(self);
         }
+      }
+      results.hops.push(thisOne);
+    },w());
+  }).nThen(function(w){ // untouched.... FACTOR this shit.
+    if (!lastRet || (lastRet.nodes&& lastRet.nodes[0] !== lastRet.from)) { return; }
+    results.reverse={};
+    results.reverse.from=lastRet.from;
+
+    tracePath(nodeDescToIp6(self), lastRet.from, cjdns, function (ret) {
+      var thisOne={};
+      if(!ret){
+        console.log("wtf, no ret value....");
+      }else{
+        lastRet = ret;
+        results.reverse.ms=ret.ms;
+//      console.log(ret);
+
+        if (ret.nodes && ret.nodes.length === 0) {
+          results.reverse.cornered=true;
+        } else if (ret.nodes[0] !== ret.from) {
+          results.reverse.cornered=false;
+          thisOne.nextOne=ret.nodes[0];  
+        }
+      }
+      results.backHops.push(thisOne);
+    }, w());
+  }).nThen(function (waitFor) {
+    f(results);
+    cjdns.disconnect();
+  })
+};
+
+var traceroute=$.traceroute=function(target,f,g){
+  //[nThen,connectWithAdminInfo,tracePath,nodeDescHighBits,nodeDescToIp6]
+  f=f||process.stdout.write;
+  g=g||console.log;
+  var cjdns;
+  var self;
+  var lastRet;
+  nThen(function (waitFor) {
+    connectWithAdminInfo(waitFor(function (c) { cjdns = c; }));
+  }).nThen(function (waitFor) {
+    cjdns.RouterModule_getPeers("0000.0000.0000.0001", waitFor(function (err, ret) {
+      if (err) { throw err; }
+      self = ret.peers[0];
+    }));
+  }).nThen(function (waitFor) {
+    process.stdout.write(self + ' ' + nodeDescHighBits(self));
+    tracePath(target, self, cjdns, function (ret) {
+      lastRet = ret;
+      f('  ' + ret.ms + 'ms\n');
+      if (ret.nodes.length === 0) {
+        f('cornered\n');
+      } else if (ret.nodes[0] !== ret.from) {
+        f(ret.nodes[0] + ' ' + nodeDescHighBits(ret.nodes[0]));
+      }
+    }, waitFor());
+  }).nThen(function (waitFor) {
+    if (!lastRet || lastRet.nodes[0] !== lastRet.from) { return; }
+    f('success, trying reverse trace\n');
+    f(lastRet.from+'\n');
+    tracePath(nodeDescToIp6(self), lastRet.from, cjdns, function (ret) {
+      lastRet = ret;
+      f('  ' + ret.ms + 'ms\n');
+      if (ret.nodes.length === 0) {
+        f('cornered\n');
+      } else if (ret.nodes[0] !== ret.from) {
+        f(ret.nodes[0]+'\n');
+      }
+    }, waitFor());
+  }).nThen(function (waitFor) {
+    g();
+    cjdns.disconnect();
+  });
+};
+
+var ping=$.ping=function (argv) {
+  var WAIT_TIME = 5000;
+  var INTERVAL = 1000;
+
+  var now = function () { return (new Date()).getTime(); };
+  var nowSeconds = function () { return Math.floor(now() / 1000); };
+
+  var switchMode = (argv.indexOf('-s') !== -1);
+  var data = '';
+  if (argv.indexOf('-d') !== -1) {
+    data = argv[argv.indexOf('-d') + 1];
+    if (!switchMode) {
+      console.log('-d data flag not possible without -s');
+      return;
+    }
+  }
+  var target = argv[argv.length-1];
+
+  var cjdns;
+  nThen(function (waitFor) {
+    connectWithAdminInfo(waitFor(function (c) { cjdns = c; }));
+  }).nThen(function (waitFor) {
+
+    var routerPing = function () {
+      var startTime = now();
+      cjdns.RouterModule_pingNode(target, WAIT_TIME, waitFor(function (err, ret) {
+        if (err) { throw err; }
+        if (ret.result === 'timeout') {
+          console.log(
+            nowSeconds() + ' timeout  p' + ret.version + ' ' + ret.ms + 'ms');
+        } else if (ret.result === 'pong') {
+          console.log(
+            nowSeconds() + ' ' + ret.from + '  p' + ret.protocol + ' ' + ret.ms + 'ms');
+        } else if (ret.error === 'not_found') {
+          console.log(nowSeconds() + " No route to host");
+        } else {
+          console.log(ret);
+        }
+        var pingIn = INTERVAL - (now() - startTime);
+        if (pingIn < 0) { pingIn = 0; }
+        setTimeout(routerPing, pingIn);
+      }));
     };
+
+    var switchPing = function () {
+      var startTime = now();
+      cjdns.SwitchPinger_ping(target, WAIT_TIME, 0, data, waitFor(function (err, ret) {
+        if (err) { throw err; }
+
+        if (ret.result === 'timeout') {
+          console.log(nowSeconds() + ' switchPing timeout ' + ret.ms + 'ms');
+        } else if (ret.result === 'pong') {
+          console.log(nowSeconds() + ' switchPing ' + ret.path + '  p' +
+            ret.version + ' ' + ret.ms + 'ms');
+        } else {
+          console.log(nowSeconds() + ' switchPing  ' + ret);
+        }
+
+        var pingIn = INTERVAL - (now() - startTime);
+        if (pingIn < 0) { pingIn = 0; }
+        setTimeout(switchPing, pingIn);
+      }));
+    };
+
+    (switchMode?switchPing:routerPing)();
+  });
+};
+
+var createSemaphore=$.createSemaphore=function (resourceCount) {
+  var queue = [];
+  var returnAfter = function (func) {
+    var called = 0;
+    return function () {
+      if (called++) { throw new Error("Function called multiple times"); }
+      if (func) { func.apply(null, arguments); }
+      resourceCount++;
+      check();
+    };
+  };
+  var check = function () {
+    if (resourceCount < 0) { throw new Error("(resourceCount < 0) should never happen"); }
+    if (resourceCount === 0 || queue.length === 0) { return; }
+    resourceCount--;
+    queue.shift()(returnAfter);
+  };
+  return {
+    take: function (func) {
+      queue.push(func);
+      check();
+    }
+  };
 };
 
 /*
