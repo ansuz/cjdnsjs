@@ -1,0 +1,23 @@
+{
+  "name": "cjdnsjs",
+  "version": "0.0.0",
+  "description": "cjdns helper functions",
+  "main": "cjdns.ansuz.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ansuz",
+  "license": "GPL-3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ansuz/cjdnsjs.git"
+  },
+  "keywords": [
+    "cjdns",
+    "ansuz"
+  ],
+  "bugs": {
+    "url": "https://github.com/ansuz/cjdnsjs/issues"
+  },
+  "homepage": "https://github.com/ansuz/cjdnsjs"
+}
