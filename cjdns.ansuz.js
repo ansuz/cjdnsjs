@@ -375,6 +375,52 @@ var dumpTable=$.dumpTable=function(callback){
     });
 };
 
+var parseAddr=$.parseAdd=function(addr){
+    /*
+        cjdns often returns values in the form of an 'addr'
+        which is composed of a node's version, path, and publicKey
+        joined with \.
+        this function parses out those values and returns them as an object.
+    */
+    //    addr: 'v16.0000.0000.0000.0001.cd7lumscdl90c34n7g31ztlygphbjuxhst3ttmql3x7txt96plz0.k',
+    var res={};
+    res.path=addr.replace(/v\d+\./,function(version){
+        res.version=version.slice(1,-1);return '';
+    }).replace(/\.[a-z0-9]+\.k$/,function(pubKey){
+        res.publicKey=pubKey.slice(1); return '';
+    });
+    return res;
+}
+
+var whoami=$.whoami=function(callback){
+    //[myfc,zeropad,dumpTable]
+    /*
+        whoami grabs your ipv6's information from dumpTable, and passes it to a callback
+
+        expect an object with the following attributes:
+            addr:       (see 'parseAddr')
+            bucket:     (should be '127')
+            ip:         (your ipv6, padded with zeros)
+            link:       (idk, but it's an integer represented as a string)
+            path:       (parsed out of 'addr')
+            time:       (an integer represented as a string)
+            version:    (an integer represented as a string)
+    */
+
+    if(typeof callback == 'undefined'){
+        callback = console.log;
+    }
+    var myAddress=$.zeropad($.myfc()[0]);
+    $.dumpTable(function(table){
+        var myData=table.filter(function(row){
+            return row.ip == myAddress;
+        })[0];
+
+        myData.publicKey=parseAddr(myData.addr).publicKey;
+        callback(myData);
+    });
+};
+
 var peerStats=$.peerStats=function(callback){
     //[connectWithAdminInfo,pubToIp6]
     if(typeof callback == 'undefined'){
