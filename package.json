@@ -19,5 +19,9 @@
   "bugs": {
     "url": "https://github.com/ansuz/cjdnsjs/issues"
   },
-  "homepage": "https://github.com/ansuz/cjdnsjs"
+  "homepage": "https://github.com/ansuz/cjdnsjs",
+  "dependencies": {
+    "ansuz": "git+https://github.com/ansuz/ansuzjs",
+    "tweetnacl": "^0.13.2"
+  }
 }
