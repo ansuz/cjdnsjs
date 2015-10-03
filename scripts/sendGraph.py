@@ -7,7 +7,7 @@
 #    www.fc00.org                              for clearnet access
 #    fc00.org                                  for hyperboria
 #    [fcc7:5feb:2c76:53d0:f954:9768:1008:fc00] for DNS-less access
-url = 'http://www.fc00.org/sendGraph'
+url = 'http://fc00.transitiontech.ca/sendGraph'
 
 # Cjdns path without trailing slash
 cjdns_path = '/home/user/cjdns'
