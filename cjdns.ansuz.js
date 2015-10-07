@@ -475,7 +475,6 @@ var peerStats=$.peerStats=function(callback){
                         roster.push(stats);
                     });
                     if(typeof ret.more !== 'undefined'){
-                        console.log(ret.more);
                         again(i+1);
                     }else{
                         callback(roster);
