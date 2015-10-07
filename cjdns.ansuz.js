@@ -1,13 +1,13 @@
+// FIXME don't export ansuz variables?
 var $=ansuz=require("ansuz"); // npm install ansuz
 var nacl=require("tweetnacl"); // npm install tweetnacl
 
 /// builtins
 var child_process=require("child_process");
 var Crypto=crypto=require("crypto");
-var os=require("os");
-var Fs=fs=require("fs");
-//var nThen=require("./nthen");
-var UDP=dgram=require("dgram");
+var os=require("os"),
+    fs=require("fs"),
+    dgram=require("dgram");
 
 var asc=$.asc=function(a,b){
     if([typeof a,typeof b].indexOf('string') !== -1){
@@ -23,6 +23,7 @@ var rotateAndMask=$.rotateAndMask=function(input,mask,rotate){
         (((input&mask)<<rotate)>>>0))>>>0;
 };
 
+// TODO docstring
 var byteSwap=$.byteSwap=function(input){
     // swap bytes around, more endian madness
     //[rotateAndMask]
@@ -30,12 +31,14 @@ var byteSwap=$.byteSwap=function(input){
     return rotateAndMask(input,0x0000FFFF,16);
 };
 
+// TODO docstring
 var uintXor=$.uintXor=function(a,b){
     // uintXor takes two 'uint32_t's, byteswaps them, and xors them
     //[byteSwap]
     return byteSwap(a)^byteSwap(b);
 };
 
+// TODO docstring
 var zeropad=$.zeropad=function(id){
     // add in the missing zeros
     return id.split(":").map( // work on the sections between colons
@@ -50,6 +53,7 @@ var zeropad=$.zeropad=function(id){
     .join(":"); // put the ipv6 back together
 };
 
+// TODO docstring
 var quarter=$.quarter=function(fc){
     // accepts a zero-padded IPV6
     // outputs a four element array of 'uint32_t's
@@ -62,6 +66,7 @@ var quarter=$.quarter=function(fc){
     return result;
 };
 
+// TODO docstring
 var qtoui=$.qtoui=function(q){
     // accepts an 8 character string of hex digits
     // returns a 'uint32_t'
@@ -79,12 +84,14 @@ var qtoui=$.qtoui=function(q){
         });
 };
 
+// TODO docstring
 var fcUintSwap=$.fcUintSwap=function(U){
     // cjdns attributes an irregular significance to the 'uint32_t's
     // [3,4,1,2]
     return U.slice(2).concat(U.slice(0,2));
 };
 
+// TODO docstring
 var prepare=$.prepare=function(ip){ 
     // unrestricted cjdns ipv6
     //[fcUintSwap,zeropad,qtoui,byteSwap]
@@ -95,6 +102,7 @@ var prepare=$.prepare=function(ip){
     );// rearrange the results [3,4,1,2]
 };
 
+// TODO docstring
 var pair=$.pair=function(A,B){
     //[prepare,uintXor]
     A=prepare(A),B=prepare(B);
@@ -108,6 +116,7 @@ var pair=$.pair=function(A,B){
     return (R===Number.NEGATIVE_INFINITY)?0:R;
 };
 
+// TODO Docstring
 var compare=$.compare=function(T,A,B){
     //[prepare]
     var X=[T,A,B].map(prepare);
@@ -123,6 +132,8 @@ var compare=$.compare=function(T,A,B){
     return 0;
 };
 
+// TODO build a cjdroute.conf linter with this
+// TODO docstring
 var uncomment=$.uncomment=function(cjdO){
     return cjdO
         .split("\n")
@@ -131,6 +142,8 @@ var uncomment=$.uncomment=function(cjdO){
         .replace(/\/\*([\s\S]*?)\*\//g,"");
 };
 
+// TODO cjdroute linter ?? 
+// TODO docstring
 var cjdb32enc=$.cjdb32enc=function(input){ // input is a Uint32Array
     var b32const="0123456789bcdfghjklmnpqrstuvwxyz".split("");
     var L=input.length;
@@ -157,6 +170,8 @@ var cjdb32enc=$.cjdb32enc=function(input){ // input is a Uint32Array
 };
 
 // for hex lookups
+// FIXME surely there's a better way than having this constant kicking around
+// at least don't export it
 var hexConst=$.hexConst="0123456789abcdef".split("");
 
 // Generate a 32 uint8 array (a privateKey)
@@ -167,8 +182,8 @@ var genPriv=$.genPriv=function(){
         });
 };
 
-// convert uint8s to hexadecimal
 var utoh=$.utoh=function(u){
+    /* convert uint8s to hexadecimal */
     return ((u&240)/16).toString(16)+
         (u&15).toString(16);
 };
@@ -328,6 +343,9 @@ var passwdGen=$.passwdGen=function(L){
         }).join("");
 };
 
+// TODO create genconf function
+
+// TODO docstring
 var myfc=$.myfc=function(){
     //{os}
     // remember everything about your network interfaces
@@ -347,6 +365,7 @@ var myfc=$.myfc=function(){
         // or false if length is zero
 };
 
+// TODO, add a docstring
 var dumpTable=$.dumpTable=function(callback){
     //[connectWithAdminInfo]
     connectWithAdminInfo(function (cjdns) {
@@ -375,7 +394,7 @@ var dumpTable=$.dumpTable=function(callback){
     });
 };
 
-var parseAddr=$.parseAdd=function(addr){
+var parseAddr=$.parseAddr=function(addr){
     /*
         cjdns often returns values in the form of an 'addr'
         which is composed of a node's version, path, and publicKey
@@ -384,7 +403,7 @@ var parseAddr=$.parseAdd=function(addr){
     */
     //    addr: 'v16.0000.0000.0000.0001.cd7lumscdl90c34n7g31ztlygphbjuxhst3ttmql3x7txt96plz0.k',
     var res={};
-    res.path=addr.replace(/v\d+\./,function(version){
+    res.switchLabel=addr.replace(/v\d+\./,function(version){
         res.version=version.slice(1,-1);return '';
     }).replace(/\.[a-z0-9]+\.k$/,function(pubKey){
         res.publicKey=pubKey.slice(1); return '';
@@ -422,34 +441,46 @@ var whoami=$.whoami=function(callback){
 };
 
 var peerStats=$.peerStats=function(callback){
-    //[connectWithAdminInfo,pubToIp6]
+    //[connectWithAdminInfo,pubToIp6,parseAddr]
     if(typeof callback == 'undefined'){
         callback = console.log;
     }
+    var roster = [];
     connectWithAdminInfo(function (cjdns) {
         var again = function (i) {
-            var roster = [];
             cjdns.InterfaceController_peerStats(i, function (err, ret) {
-                if(err){throw err;}
+                if(err){
+                    console.log(err);
+                    cjdns.disconnect();
+                    // callback is never called...
+                }else{
                     ret.peers.forEach(function(peer){
                         var stats = {
-                            key:peer['publicKey']
-                            ,ipv6:pubToIp6(peer['publicKey'])
-                            ,switchLabel:peer['switchLabel']
-                            ,bytesIn:peer['bytesIn']
-                            ,bytesOut:peer['bytesOut']
-                            ,state:peer['state']
-                            ,duplicates:peer['duplicates']
-                            ,receivedOutOfRange:peer['receivedOutOfRange']
-                            ,user:(typeof(peer.user) === 'string')?peer['user']:""
+                            addr:peer.addr,
+                            bytesIn:peer.bytesIn,
+                            bytesOut:peer.bytesOut,
+                            recvKbps:peer.recvKbps,
+                            sendKbps:peer.recvKbps,
+                            state:peer.state,
+                            duplicates:peer.duplicates,
+                            lostPackets:peer.lostPackets,
+                            receivedOutOfRange:peer.receivedOutOfRange,
+                            user:(typeof(peer.user) === 'string')?peer['user']:"",
                         };
-                    roster.push(stats);
+                        var parsed=$.parseAddr(peer.addr);
+                        for (var prop in parsed){
+                            stats[prop]=parsed[prop];
+                        }
+                        stats.ipv6=pubToIp6(stats.publicKey);
+                        roster.push(stats);
                     });
-                if(typeof(ret.more) !== 'undefined'){
-                    again(i+1);
-                }else{
-                    callback(roster);
-                    cjdns.disconnect();
+                    if(typeof ret.more !== 'undefined'){
+                        console.log(ret.more);
+                        again(i+1);
+                    }else{
+                        callback(roster);
+                        cjdns.disconnect();
+                    }
                 }
             });
         };
@@ -457,6 +488,9 @@ var peerStats=$.peerStats=function(callback){
     });
 };
 
+///////////////////////////////////////////////////////
+// Bencoding section
+//////////////////////////////////////////////////////
 var bencode=$.bencode=function(obj) {
     //[btypeof,bstring,bint,blist,bdict]
     // bencode an object
@@ -599,6 +633,7 @@ var blist=$.blist=function(list) {
     return str + "e";
 };
 
+// TODO test whether we can export dict functions
 var bdict=$.bdict=function(dict) {
     //[bstring,bencode]
     // bencode a dictionary
@@ -615,6 +650,10 @@ var bdict=$.bdict=function(dict) {
     }
     return str + "e";
 };
+
+////////////////////////////////////////////////////////////////////////
+// END bencoding section
+////////////////////////////////////////////////////////////////////////
 
 var sendmsg=$.sendmsg=function(sock, addr, port, msg, txid, callback) {
     if(!global.TIMEOUT_MILLISECONDS){
@@ -638,6 +677,8 @@ var sendmsg=$.sendmsg=function(sock, addr, port, msg, txid, callback) {
     });
 };
 
+// this looks useful.
+// TODO use it
 var callFunc =$.callFunc=function (sock, addr, port, pass, func, args, callback) {
     //[bencode,sendmsg,bencode]
     //{crypto}
@@ -683,6 +724,7 @@ var getArgs = $.getArgs=function (func) {
     return rArgs;
 };
 
+// FIXME add docstrings!
 var makeFunctionDescription =$.makeFunctionDescription=function (funcName, func) {
     //[getArgs]
     var args = getArgs(func);
@@ -693,6 +735,7 @@ var makeFunctionDescription =$.makeFunctionDescription=function (funcName, func)
     return funcName + "(" + outArgs.join(', ') + ")";
 };
 
+// FIXME don't throw
 var compatibleType =$.compatibleType=function (typeName, obj) {
     switch (typeName) {
         case 'Int': return (typeof(obj) === 'number' && Math.floor(obj) === obj);
@@ -736,6 +779,7 @@ var makeFunction = $.makeFunction=function (sock, addr, port, pass, funcName, fu
     };
 };
 
+// TODO add docstring
 var getFunctions =$.getFunctions= function (sock, addr, port, pass, callback) {
     //{nthen}
     //[callFunc]
@@ -768,6 +812,7 @@ var getFunctions =$.getFunctions= function (sock, addr, port, pass, callback) {
     });
 };
 
+// FIXME don't throw!
 var connect =$.connect=function (addr, port, pass, callback) {
     //[die,bdecode]
     var sock = dgram.createSocket((addr.indexOf(':') !== -1) ? 'udp6' : 'udp4');
@@ -799,6 +844,8 @@ var connect =$.connect=function (addr, port, pass, callback) {
     });
 };
 
+// FIXME looks like this is where you'd have to deal with ~/.cjdnsadmin
+// is that the only thing that depends on fs?
 var connectWithAdminInfo=$.connectWithAdminInfo= function (callback) {
     //{fs}
     // requires .cjdnsadmin
@@ -814,12 +861,15 @@ var connectWithAdminInfo=$.connectWithAdminInfo= function (callback) {
 };
 
 var connectAsAnon = $.connectAsAnon = function (callback, addr, port) {
-    addr = addr || '127.0.0.1';
-    port = port || 11234;
-    connect(addr, port, null, callback);
+    connect(addr || '127.0.0.1', port||11234, null, callback);
 };
 
+// FIXME factor out dumptable, remove 'throw', handle errors
+// implement add if absent (in ansuzjs?)
 var getAddresses =$.getAddresses=function (cjdns, callback) {
+    /*
+        return an array of unique addresses in your routing table
+    */
     var addresses = [];
     var again = function (i) {
         cjdns.NodeStore_dumpTable(i, function (err, table) {
@@ -842,6 +892,8 @@ var getAddresses =$.getAddresses=function (cjdns, callback) {
     again(0);
 };
 
+// FIXME categorize
+// TODO group with pathFinderTree
 var buildTreeCycle =$.buildTreeCycle=function (current, nodes) {
     current.peers = [];
     for (var i = nodes.length - 1; i >= 0; i--) {
@@ -856,6 +908,8 @@ var buildTreeCycle =$.buildTreeCycle=function (current, nodes) {
     return current;
 };
 
+// FIXME categorize
+// TODO group this with pathFinderTree
 var buildTree=$.buildTree=function (origNodes) {
     //[buildTreeCycle]
     var nodes = [];
@@ -873,6 +927,8 @@ var buildTree=$.buildTree=function (origNodes) {
     throw new Error();
 };
 
+// FIXME replace with *whoami*
+// this was a silly idea
 var versionStats=$.versionStats=function(cjdnsPath,f){
     //{child_process}
     var stats={};
@@ -899,6 +955,8 @@ var versionStats=$.versionStats=function(cjdnsPath,f){
         });
 };
 
+// FIXME don't depend on ~/.cjdnsadmin
+// TODO get rid of this
 var getCjdnsAdmin=$.getCjdnsAdmin=function(){
     // assumes you have a file ~/.cjdnsadmin
     // which is valid JSON, and contains a 'cjdnsPath' attribute
@@ -912,6 +970,8 @@ var getCjdnsAdmin=$.getCjdnsAdmin=function(){
     }
 };
 
+// TODO distribute this!
+// FIXME remove versionStats, use whoami
 var bugReport=$.bugReport=function(f){
     //{fs}
     //[peerStats,dumpTable,myfc,getCjdnsAdmin]
@@ -925,9 +985,6 @@ var bugReport=$.bugReport=function(f){
 
     // get path to cjdns git repo
     var cjdnsPath=getCjdnsAdmin().cjdnsPath;
-
-    // your fc address
-    report.myfcs=$.myfc();
 
     // your table dump
     race++;
@@ -947,8 +1004,18 @@ var bugReport=$.bugReport=function(f){
 
     // cjdns version && git commit
     race++;
+
+    $.whoami(function(my){
+        report.ipv6=my.ip;
+        report.version=my.version;
+        report.publicKey=my.publicKey;
+        race--;
+        checkIfDone();
+    });
+
+    race++;
     $.versionStats(cjdnsPath,function(x){
-        report.cjdrouteVersion=x.cjdrouteVersion;
+//        report.cjdrouteVersion=x.cjdrouteVersion;
         report.gitCommit=x.gitCommit;
         race--;
         checkIfDone();
@@ -957,7 +1024,11 @@ var bugReport=$.bugReport=function(f){
     // comments
 };
 
-var getPeers=$.getPeers=function(f){
+// FIXME duplicate?
+// FIXME why is most of it commented out?
+// FUCK
+var getPeers=$.getPeers=function(f,label){
+    label=label||'0000.0000.0000.0001';
 
     f=f||console.log;
     var cjdns
@@ -968,65 +1039,18 @@ var getPeers=$.getPeers=function(f){
     nThen(function(w){ // w is a function, 'waitFor'
         connectWithAdminInfo(w(function(c){cjdns=c;}));
     }).nThen(function(w){
-        cjdns.RouterModule_getPeers('0000.0000.0000.0001',w(function(err,ret){
+        cjdns.RouterModule_getPeers(label,w(function(err,ret){
             if(err){console.log(err)} // if called from a server, we don't want to crash
-            console.log(JSON.stringify(ret,null,2));
-//            self=ret.peers[0];
+            f(ret);
         }));
-    }).nThen(function(w){
-/*
-        var thisOne={};
-        thisOne.self=self;
-        thisOne.highBits=nodeDescHighBits(self);
-        tracePath(target,self,cjdns,function(ret){
-            lastRet=ret;
-            thisOne.ms=ret.ms;
-            thisOne.nextOne={};
-            if(ret.nodes){
-//                console.log(ret);
-                if(ret.nodes&&ret.nodes.length===0){
-                    thisOne.cornered=true;
-                }else if(ret.nodes[0]!==ret.from){
-                    thisOne.cornered=false;
-                    thisOne.nextOne=ret.nodes[0];
-                    thisOne.nextOne.highBits=nodeDescHighBits(self);
-                }
-            }
-            results.hops.push(thisOne);
-        },w());
-/*
-    }).nThen(function(w){ // untouched.... FACTOR this shit.
-
-        if (!lastRet || (lastRet.nodes&& lastRet.nodes[0] !== lastRet.from)) { return; }
-        results.reverse={};
-        results.reverse.from=lastRet.from;
-
-        tracePath(nodeDescToIp6(self), lastRet.from, cjdns, function (ret) {
-            var thisOne={};
-            if(!ret){
-                console.log("wtf, no ret value....");
-            }else{
-                lastRet = ret;
-                results.reverse.ms=ret.ms;
-//            console.log(ret);
-
-                if (ret.nodes && ret.nodes.length === 0) {
-                    results.reverse.cornered=true;
-                } else if (ret.nodes[0] !== ret.from) {
-                    results.reverse.cornered=false;
-                    thisOne.nextOne=ret.nodes[0];    
-                }
-            }
-            results.backHops.push(thisOne);
-        }, w());
-*/
     }).nThen(function (waitFor) {
-        f(results);
+//        f(results);
         cjdns.disconnect();
-    })
+    });
 };
 
-
+// FIXME factor
+// handle errors
 var pathFinderTree=$.pathFinderTree=function(f){
     //[connectWithAdminInfo,isArray,printTree,getAddresses,buildTree]
     var results={};
@@ -1082,18 +1106,23 @@ var pathFinderTree=$.pathFinderTree=function(f){
     });
 };
 
+// TODO categorize
+// utility
 var nodeDescToIp6=$.nodeDescToIp6=function (nodeDesc) {
     //[pubToIp6]
     var key = nodeDesc.replace(/.*\.([^.]*\.k)$/, function (all, one) { return one; });
     return pubToIp6(key);
 };
 
+// TODO categorize
+// utility
 var nodeDescHighBits=$.nodeDescHighBits=function (nodeDesc) {
     //[nodeDescToIp6]
     var ip6 = nodeDescToIp6(nodeDesc);
     return ip6.substring(20,29);
 };
 
+// FIXME idek what's going on here
 var tracePath=$.tracePath=function (target, queryNode, cjdns, cb, doneCb) {
     //[connectWithAdminInfo,nodeDescToIp6]
     var lastNode = queryNode;
@@ -1127,6 +1156,9 @@ var tracePath=$.tracePath=function (target, queryNode, cjdns, cb, doneCb) {
     again();
 };
 
+// FIXME this is junk atm
+// TODO factor like crazy, swap console.logs for generic error handler
+// TODO use mis
 var getTrace=$.getTrace=function(target,f){
     f=f||console.log;
     var cjdns
@@ -1160,7 +1192,7 @@ var getTrace=$.getTrace=function(target,f){
             }
             results.hops.push(thisOne);
         },w());
-    }).nThen(function(w){ // untouched.... FACTOR this shit.
+    }).nThen(function(w){ // untouched.... FACTOR this
         if (!lastRet || (lastRet.nodes&& lastRet.nodes[0] !== lastRet.from)) { return; }
         results.reverse={};
         results.reverse.from=lastRet.from;
@@ -1172,7 +1204,6 @@ var getTrace=$.getTrace=function(target,f){
             }else{
                 lastRet = ret;
                 results.reverse.ms=ret.ms;
-//            console.log(ret);
 
                 if (ret.nodes && ret.nodes.length === 0) {
                     results.reverse.cornered=true;
@@ -1233,6 +1264,8 @@ var traceroute=$.traceroute=function(target,f,g){
     });
 };
 
+// FIXME this can easily be cleaned up
+// also, argv? take a callback, don't console.log
 var ping=$.ping=function (argv) {
     var WAIT_TIME = 5000;
     var INTERVAL = 1000;
