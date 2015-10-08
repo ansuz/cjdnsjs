@@ -9,6 +9,10 @@ var os=require("os"),
     fs=require("fs"),
     dgram=require("dgram");
 
+var __defaultError=$.__defaultError=function(e){
+    console.error(e);
+};
+
 var asc=$.asc=function(a,b){
     if([typeof a,typeof b].indexOf('string') !== -1){
         a=a.lowerCase(), b=b.toLowerCase();
@@ -55,8 +59,10 @@ var zeropad=$.zeropad=function(id){
 
 // TODO docstring
 var quarter=$.quarter=function(fc){
-    // accepts a zero-padded IPV6
-    // outputs a four element array of 'uint32_t's
+    /*  accepts a zero-padded IPV6
+        breaks it into four quarters
+        (uint32_t in hex form)
+    */
     var result=[];
     fc.replace(/:/g,"")
         .replace(/[a-f0-9]{8}/g,function(uint){
@@ -66,10 +72,10 @@ var quarter=$.quarter=function(fc){
     return result;
 };
 
-// TODO docstring
 var qtoui=$.qtoui=function(q){
-    // accepts an 8 character string of hex digits
-    // returns a 'uint32_t'
+    /*  accepts an 8 character string of hex digits
+        converts them into a 32 bit, unsigned integer ('uint32_t')
+    */
     var bytes=[];
     q.replace(/[0-9a-f]{2}/g,function(hexByte){
         bytes.push(hexByte);
@@ -84,16 +90,30 @@ var qtoui=$.qtoui=function(q){
         });
 };
 
-// TODO docstring
 var fcUintSwap=$.fcUintSwap=function(U){
-    // cjdns attributes an irregular significance to the 'uint32_t's
-    // [3,4,1,2]
+    /*  cjdns attributes an irregular significance to the 'uint32_t's.
+        it was speculated (correctly) that people would try to choose
+        'vanity addresses' which ended in hex strings like ':beef' or ':cafe'
+        swapping their order means these vanity addresses have less of an
+        effect on the distribution of the keyspace
+
+        this function takes a four element array and returns them in swapped
+        order ([3,4,1,2])
+    */
     return U.slice(2).concat(U.slice(0,2));
 };
 
-// TODO docstring
 var prepare=$.prepare=function(ip){ 
-    // unrestricted cjdns ipv6
+    /*
+        'prepare' provides a convenient wrapper around the lower level
+        functions used to prepare an ipv6 for other operations...
+
+        pass it an unrestricted cjdns ip,
+        it pads it with zeros, breaks it into quarters
+        converts quarters into unsigned 32bit integers,
+        performs the byteswaps which correct for endianness
+        and swaps the result into cjdns' peculiar ordering
+    */
     //[fcUintSwap,zeropad,qtoui,byteSwap]
     return fcUintSwap(
         quarter(zeropad(ip)) // ipv6 quarters array
@@ -102,8 +122,13 @@ var prepare=$.prepare=function(ip){
     );// rearrange the results [3,4,1,2]
 };
 
-// TODO docstring
 var pair=$.pair=function(A,B){
+    /*
+        the xor metric lazily traverses arrays of uint32_t quarters of ipv6s
+        choosing which is closer as soon as it figures it out.
+        This implementation traverses the whole array, and returns a compressed
+        representation of the comparision (using log2)
+    */
     //[prepare,uintXor]
     A=prepare(A),B=prepare(B);
     var R=A.map(function(a,i){
@@ -116,8 +141,12 @@ var pair=$.pair=function(A,B){
     return (R===Number.NEGATIVE_INFINITY)?0:R;
 };
 
-// TODO Docstring
 var compare=$.compare=function(T,A,B){
+    /*
+        compare takes three ipv6s, a target, and two others to compare
+        it returns -1 if the first is closer, 1 if the second, and 0 otherwise
+    */
+
     //[prepare]
     var X=[T,A,B].map(prepare);
     for(var i=0;i<3;i++){
@@ -132,9 +161,26 @@ var compare=$.compare=function(T,A,B){
     return 0;
 };
 
+var sortedIp6s=$.sortedIp6s=function(A){
+    /*
+        copy an array of ipv6s, and sort them according to their xor metric
+        relative to a baseline ipv6 'fc00::'
+        return the result
+    */
+    var ref="fc00:0000:0000:0000:0000:0000:0000:0000"
+    var B=A.slice(0);
+    B.sort(function(a,b){
+        return compare(ref,a,b);
+    });
+    return B;
+};
+
 // TODO build a cjdroute.conf linter with this
 // TODO docstring
 var uncomment=$.uncomment=function(cjdO){
+    /*
+        strip line and block comments from the text of cjdroute.conf
+    */
     return cjdO
         .split("\n")
         .map(function(line,index){return line.replace(/\/\/.*$/g,"");})
@@ -660,7 +706,10 @@ var sendmsg=$.sendmsg=function(sock, addr, port, msg, txid, callback) {
     }
     var to = setTimeout(function () {
         callback(new Error("timeout after " + TIMEOUT_MILLISECONDS + "ms"));
-        delete sock.handlers[json.txid];
+//        $.__defaultError("timeout after " + TIMEOUT_MILLISECONDS + "ms"));
+
+        // what json?
+        delete sock.handlers[txid];
     }, TIMEOUT_MILLISECONDS);
     sock.handlers[txid] = {
         callback: callback,
@@ -787,7 +836,10 @@ var getFunctions =$.getFunctions= function (sock, addr, port, pass, callback) {
         var next = function (i) {
             callFunc(sock, addr, port, pass, 'Admin_availableFunctions', {page:i},
                 waitFor(function (err, ret) {
-                    if (err) { throw err; }
+                    if (err) { 
+                        return __defaultError(err);
+//                        throw err;
+                    }
                     Object.keys(ret.availableFunctions).forEach(function (funcName) {
                         funcs[funcName] = ret.availableFunctions[funcName];
                     })
@@ -832,7 +884,10 @@ var connect =$.connect=function (addr, port, pass, callback) {
 
     nThen(function (waitFor) {
         callFunc(sock, addr, port, pass, 'ping', {}, waitFor(function (err, ret) {
-            if (err) { throw err; }
+            if (err) { 
+            //    throw err; 
+                return __defaultError(err);
+            }
             //console.log("got pong! [" + JSON.stringify(ret) + "]");
         }));
     }).nThen(function (waitFor) {
@@ -1023,9 +1078,8 @@ var bugReport=$.bugReport=function(f){
     // comments
 };
 
-// FIXME duplicate?
-// FIXME why is most of it commented out?
-// FUCK
+// FIXME seems to error out more than a lot of other functions
+// need to make this safe.
 var getPeers=$.getPeers=function(f,label){
     label=label||'0000.0000.0000.0001';
 
@@ -1038,13 +1092,18 @@ var getPeers=$.getPeers=function(f,label){
     nThen(function(w){ // w is a function, 'waitFor'
         connectWithAdminInfo(w(function(c){cjdns=c;}));
     }).nThen(function(w){
+        if(cjdns.RouterModule_getPeers){
         cjdns.RouterModule_getPeers(label,w(function(err,ret){
             if(err){console.log(err)} // if called from a server, we don't want to crash
             f(ret);
+//            w();
+            cjdns.disconnect();
         }));
-    }).nThen(function (waitFor) {
-//        f(results);
-        cjdns.disconnect();
+        }else{
+            $.__defaultError("[GETPEERS ERR]:undefined function call");
+            w();
+            cjdns.disconnect();
+        }
     });
 };
 
