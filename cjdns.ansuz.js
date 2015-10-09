@@ -1,6 +1,12 @@
 // FIXME don't export ansuz variables?
-var $=ansuz=require("ansuz"); // npm install ansuz
+var ansuz=require("ansuz");
+var $=ansuz;// npm install "git+https://github.com/ansuz/ansuzjs"
+
+// extend with bencoding
+(require("./lib/cjdns.bencode")($));
+
 var nacl=require("tweetnacl"); // npm install tweetnacl
+var mis=require("mis");
 
 /// builtins
 var child_process=require("child_process");
@@ -533,173 +539,6 @@ var peerStats=$.peerStats=function(callback){
     });
 };
 
-///////////////////////////////////////////////////////
-// Bencoding section
-//////////////////////////////////////////////////////
-var bencode=$.bencode=function(obj) {
-    //[btypeof,bstring,bint,blist,bdict]
-    // bencode an object
-    switch(btypeof(obj)) {
-        case "string":         return bstring(obj);
-        case "number":         return bint(obj);
-        case "list":             return blist(obj);
-        case "dictionary": return bdict(obj);
-        default:                     return null;
-    }
-};
-
-var bdecode=$.bdecode=function(str) {
-    //[bparse]
-    // decode a bencoded string into a javascript object
-    var dec = bparse(str);
-    if(dec != null && dec[1] == "")
-        return dec[0];
-    return null;
-};
-
-var bparse=$.bparse=function(str) {
-    //[bparseDict,bparseList,bparseInt,bparseString]
-    // parse a bencoded string; bdecode is really just a wrapper for this one.
-    // all bparse* functions return an array in the form
-    // [parsed object, remaining string to parse]
-    switch(str.charAt(0)) {
-        case "d": return bparseDict(str.substr(1));
-        case "l": return bparseList(str.substr(1));
-        case "i": return bparseInt(str.substr(1));
-        default:    return bparseString(str);
-    }
-};
-
-var bparseString=$.bparseString=function(str) {
-    // parse a bencoded string
-    str2 = str.split(":", 1)[0];
-    if(isNum(str2)) {
-        len = parseInt(str2);
-        return [str.substr(str2.length+1, len),
-            str.substr(str2.length+1+len)];
-    }
-    return null;
-};
-
-var bparseInt=$.bparseInt=function bparseInt(str){
-    // parse a bencoded integer
-    //[isNum]
-    var str2 = str.split("e", 1)[0];
-    if(!isNum(str2)) {
-        return null;
-    }
-    return [str2, str.substr(str2.length+1)];
-};
-
-var bparseList=$.bparseList=function(str) {
-    //[bparse]
-    // parse a bencoded list
-    var p, list = [];
-    while(str.charAt(0) != "e" && str.length > 0) {
-        p = bparse(str);
-        if(null == p)
-            return null;
-        list.push(p[0]);
-        str = p[1];
-    }
-    if(str.length <= 0)
-        return null;
-    return [list, str.substr(1)];
-};
-
-var bparseDict=$.bparseDict=function(str) {
-    //[bparseString,bparse]
-    // parse a bencoded dictionary
-    var key, val, dict = {};
-    while(str.charAt(0) != "e" && str.length > 0) {
-        key = bparseString(str);
-        if(null == key)
-            return;
-        val = bparse(key[1]);
-        if(null == val)
-            return null;
-        dict[key[0]] = val[0];
-        str = val[1];
-    }
-    if(str.length <= 0)
-        return null;
-    return [dict, str.substr(1)];
-};
-
-var isNum=$.isNum=function(str) {
-    // is the given string numeric?
-    str=str.toString();
-    var c
-        ,i=(str.charAt(0)==='-')?1:0;
-
-    for(; i < str.length; i++) {
-        c = str.charCodeAt(i);
-        if(c < 48 || c > 57) {
-            return false;
-        }
-    }
-    return true;
-};
-
-var btypeof=$.btypeof=function btypeof(obj) {
-    // returns the bencoding type of the given object
-    var type = typeof obj;
-    if(type == "object") {
-        if(typeof obj.length == "undefined")
-            return "dictionary";
-        return "list";
-    }
-    return type;
-};
-
-var bstring=$.bstring=function(str) {
-    // bencode a string
-    return (str.length + ":" + str);
-};
-
-var bint=$.bint=function(num) {
-    // bencode an integer
-    return "i" + num + "e";
-};
-
-var blist=$.blist=function(list) {
-    //[bencode]
-    // bencode a list
-    var str, enclist;
-    enclist = [];
-    for(key in list) {
-        enclist.push(bencode(list[key]));
-    }
-    enclist.sort();
-    str = "l";
-    for(key in enclist) {
-        str += enclist[key];
-    }
-    return str + "e";
-};
-
-// TODO test whether we can export dict functions
-var bdict=$.bdict=function(dict) {
-    //[bstring,bencode]
-    // bencode a dictionary
-    var str, enclist;
-    enclist = []
-    for(key in dict) {
-        enclist.push(bstring(key) + bencode(dict[key]));
-    }
-    enclist.sort();
-
-    str = "d";
-    for(key in enclist) {
-        str += enclist[key];
-    }
-    return str + "e";
-};
-
-////////////////////////////////////////////////////////////////////////
-// END bencoding section
-////////////////////////////////////////////////////////////////////////
-
 var sendmsg=$.sendmsg=function(sock, addr, port, msg, txid, callback) {
     if(!global.TIMEOUT_MILLISECONDS){
         TIMEOUT_MILLISECONDS=10000;
@@ -731,7 +570,7 @@ var callFunc =$.callFunc=function (sock, addr, port, pass, func, args, callback)
     //[bencode,sendmsg,bencode]
     //{crypto}
     var cookieTxid = String(sock.counter++);
-    var cookieMsg = new Buffer(bencode({'q':'cookie','txid':cookieTxid}));
+    var cookieMsg = new Buffer(ansuz.bencode({'q':'cookie','txid':cookieTxid}));
     sendmsg(sock, addr, port, cookieMsg, cookieTxid, function (err, ret) {
         if (err) { callback(err); return; }
         var cookie = ret.cookie;
@@ -747,8 +586,8 @@ var callFunc =$.callFunc=function (sock, addr, port, pass, func, args, callback)
         });
         json.cookie = cookie;
         json.hash = crypto.createHash('sha256').update(pass + cookie).digest('hex');
-        json.hash = crypto.createHash('sha256').update(bencode(json)).digest('hex');
-        sendmsg(sock, addr, port, new Buffer(bencode(json)), json.txid, callback);
+        json.hash = crypto.createHash('sha256').update(ansuz.bencode(json)).digest('hex');
+        sendmsg(sock, addr, port, new Buffer(ansuz.bencode(json)), json.txid, callback);
     });
 };
 
@@ -871,7 +710,7 @@ var connect =$.connect=function (addr, port, pass, callback) {
     sock.handlers = {};
     sock.counter = ansuz.die(4000000000);
     sock.on('message', function (msg) {
-        var response = bdecode(msg.toString('utf8'));
+        var response = ansuz.bdecode(msg.toString('utf8'));
         if (!response.txid) {
             throw new Error("Response [" + msg + "] with no txid");
         }
@@ -901,6 +740,7 @@ var connect =$.connect=function (addr, port, pass, callback) {
 // FIXME looks like this is where you'd have to deal with ~/.cjdnsadmin
 // is that the only thing that depends on fs?
 var connectWithAdminInfo=$.connectWithAdminInfo= function (callback) {
+    //[nThen,connect]
     //{fs}
     // requires .cjdnsadmin
     var cjdnsAdmin;
@@ -1081,6 +921,7 @@ var bugReport=$.bugReport=function(f){
 // FIXME seems to error out more than a lot of other functions
 // need to make this safe.
 var getPeers=$.getPeers=function(f,label){
+    //[nThen,connectWithAdminInfo,__defaultError]
     label=label||'0000.0000.0000.0001';
 
     f=f||console.log;
@@ -1395,7 +1236,7 @@ var ping=$.ping=function (argv) {
 var coreExit=$.coreExit=function(){
     /* lol, exit the core */
     //[connectWithAdminInfo]
-    $.connectWithAdminInfo(function(c){
+    connectWithAdminInfo(function(c){
         c.Core_exit();
     });
 }
